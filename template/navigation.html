@@ -1,0 +1,26 @@
+{{- define "chapter"}}
+    {{- range .}}
+<li class="chapter" data-level="{{ .Level}}" data-path="{{ . | rel }}">
+    <a href="{{ . | rel }}">{{ .Title}}</a>
+    {{- if .SubNavPoints }}
+    {{template "articles" .SubNavPoints}}
+    {{- end}}
+</li>
+    {{- end}}
+{{- end}}
+{{- define "articles"}}
+<ul class="articles">
+        {{- template "chapter" . }}
+</ul>
+{{- end -}}
+<nav role="navigation">
+    <ul class="summary">
+        {{- template "chapter" .}}
+        <li class="divider"></li>
+        <li>
+            <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+                Published with GitBook
+            </a>
+        </li>
+    </ul>
+</nav>

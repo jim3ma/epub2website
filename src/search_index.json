@@ -1,0 +1,330 @@
+{
+  "index": {
+	"version": "0.5.12",
+	"fields": [
+	  {
+		"name": "title",
+		"boost": 10
+	  },
+	  {
+		"name": "keywords",
+		"boost": 15
+	  },
+	  {
+		"name": "body",
+		"boost": 1
+	  }
+	],
+	"ref": "url",
+	"documentStore": {
+	  "store": {
+		"./": [
+		  "===",
+		  "index",
+		  "introduct",
+		  "page",
+		  "test",
+		  "text"
+		],
+		"content.html": [
+		  "===",
+		  "chang",
+		  "content",
+		  "test"
+		],
+		"last.html": [
+		  "author",
+		  "hello",
+		  "last",
+		  "page",
+		  "world"
+		]
+	  },
+	  "length": 3
+	},
+	"tokenStore": {
+	  "root": {
+		"docs": {},
+		"=": {
+		  "docs": {},
+		  "=": {
+			"docs": {},
+			"=": {
+			  "docs": {
+				"./": {
+				  "ref": "./",
+				  "tf": 0.2
+				},
+				"content.html": {
+				  "ref": "content.html",
+				  "tf": 0.25
+				}
+			  }
+			}
+		  }
+		},
+		"i": {
+		  "docs": {},
+		  "n": {
+			"docs": {},
+			"d": {
+			  "docs": {},
+			  "e": {
+				"docs": {},
+				"x": {
+				  "docs": {
+					"./": {
+					  "ref": "./",
+					  "tf": 0.2
+					}
+				  }
+				}
+			  }
+			},
+			"t": {
+			  "docs": {},
+			  "r": {
+				"docs": {},
+				"o": {
+				  "docs": {},
+				  "d": {
+					"docs": {},
+					"u": {
+					  "docs": {},
+					  "c": {
+						"docs": {},
+						"t": {
+						  "docs": {
+							"./": {
+							  "ref": "./",
+							  "tf": 10
+							}
+						  }
+						}
+					  }
+					}
+				  }
+				}
+			  }
+			}
+		  }
+		},
+		"p": {
+		  "docs": {},
+		  "a": {
+			"docs": {},
+			"g": {
+			  "docs": {},
+			  "e": {
+				"docs": {
+				  "./": {
+					"ref": "./",
+					"tf": 0.2
+				  },
+				  "last.html": {
+					"ref": "last.html",
+					"tf": 0.25
+				  }
+				}
+			  }
+			}
+		  }
+		},
+		"t": {
+		  "docs": {},
+		  "e": {
+			"docs": {},
+			"s": {
+			  "docs": {},
+			  "t": {
+				"docs": {
+				  "./": {
+					"ref": "./",
+					"tf": 0.2
+				  },
+				  "content.html": {
+					"ref": "content.html",
+					"tf": 0.25
+				  }
+				}
+			  }
+			},
+			"x": {
+			  "docs": {},
+			  "t": {
+				"docs": {
+				  "./": {
+					"ref": "./",
+					"tf": 0.2
+				  }
+				}
+			  }
+			}
+		  }
+		},
+		"c": {
+		  "docs": {},
+		  "h": {
+			"docs": {},
+			"a": {
+			  "docs": {},
+			  "n": {
+				"docs": {},
+				"g": {
+				  "docs": {
+					"content.html": {
+					  "ref": "content.html",
+					  "tf": 10
+					}
+				  }
+				}
+			  }
+			}
+		  },
+		  "o": {
+			"docs": {},
+			"n": {
+			  "docs": {},
+			  "t": {
+				"docs": {},
+				"e": {
+				  "docs": {},
+				  "n": {
+					"docs": {},
+					"t": {
+					  "docs": {
+						"content.html": {
+						  "ref": "content.html",
+						  "tf": 0.5
+						}
+					  }
+					}
+				  }
+				}
+			  }
+			}
+		  }
+		},
+		"a": {
+		  "docs": {},
+		  "u": {
+			"docs": {},
+			"t": {
+			  "docs": {},
+			  "h": {
+				"docs": {},
+				"o": {
+				  "docs": {},
+				  "r": {
+					"docs": {
+					  "last.html": {
+						"ref": "last.html",
+						"tf": 10
+					  }
+					}
+				  }
+				}
+			  }
+			}
+		  }
+		},
+		"h": {
+		  "docs": {},
+		  "e": {
+			"docs": {},
+			"l": {
+			  "docs": {},
+			  "l": {
+				"docs": {},
+				"o": {
+				  "docs": {
+					"last.html": {
+					  "ref": "last.html",
+					  "tf": 0.25
+					}
+				  }
+				}
+			  }
+			}
+		  }
+		},
+		"l": {
+		  "docs": {},
+		  "a": {
+			"docs": {},
+			"s": {
+			  "docs": {},
+			  "t": {
+				"docs": {
+				  "last.html": {
+					"ref": "last.html",
+					"tf": 0.25
+				  }
+				}
+			  }
+			}
+		  }
+		},
+		"w": {
+		  "docs": {},
+		  "o": {
+			"docs": {},
+			"r": {
+			  "docs": {},
+			  "l": {
+				"docs": {},
+				"d": {
+				  "docs": {
+					"last.html": {
+					  "ref": "last.html",
+					  "tf": 0.25
+					}
+				  }
+				}
+			  }
+			}
+		  }
+		}
+	  },
+	  "length": 15
+	},
+	"corpusTokens": [
+	  "===",
+	  "author",
+	  "chang",
+	  "content",
+	  "hello",
+	  "index",
+	  "introduct",
+	  "last",
+	  "page",
+	  "test",
+	  "text",
+	  "world"
+	],
+	"pipeline": [
+	  "stopWordFilter",
+	  "stemmer"
+	]
+  },
+  "store": {
+	"./": {
+	  "url": "./",
+	  "title": "Introduction",
+	  "keywords": "",
+	  "body": "Index Page\n===\ntest text\n"
+	},
+	"content.html": {
+	  "url": "content.html",
+	  "title": "Changes",
+	  "keywords": "",
+	  "body": "Content\n===\ntest content\n"
+	},
+	"last.html": {
+	  "url": "last.html",
+	  "title": "Authors",
+	  "keywords": "",
+	  "body": "Last Page\nHello world\n"
+	}
+  }
+}
