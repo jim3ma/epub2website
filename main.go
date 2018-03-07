@@ -24,6 +24,7 @@ func init() {
 	flag.StringVar(&epubFile, "e", "", "epub book path")
 }
 
+//go:generate statik -src=./template
 func main() {
 	flag.Parse()
 	var err error
@@ -46,7 +47,7 @@ func main() {
 		return
 	}
 
-	firstPage, err := epub.Transfer(output, workdir, gitbookUrl)
+	firstPage, err := epub.Convert(output, workdir, gitbookUrl)
 	if err != nil {
 		panic(err)
 	}

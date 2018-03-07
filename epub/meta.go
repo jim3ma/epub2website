@@ -3,7 +3,6 @@ package epub
 import (
 	"path"
 	"os"
-	"github.com/PuerkitoBio/goquery"
 	"strings"
 	"encoding/xml"
 	"bytes"
@@ -12,7 +11,23 @@ import (
 	"text/template"
 	"time"
 	"path/filepath"
+	"net/http"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/rakyll/statik/fs"
+	_ "github.com/jim3ma/epub2website/statik"
 )
+
+const (
+	MediaTypeCSS       = "text/css"
+	MediaTypeImageJPEG = "image/jpeg"
+	MediaTypeImagePNG  = "image/png"
+	MediaTypeImageGIF  = "image/gif"
+	MediaTypeHTML      = "application/xhtml+xml"
+	MediaTypeNCX       = "application/x-dtbncx+xml"
+)
+
+var templatefs http.FileSystem
 
 type MetaInfo struct {
 	RootFile RootFile `xml:"rootfiles>rootfile"`
@@ -23,13 +38,29 @@ type RootFile struct {
 }
 
 type OPF struct {
-	//Manifests []Manifest `xml:"manifest>item"`
-	Guides []Guide `xml:"guide>reference"`
+	Manifests []*ManifestItem `xml:"manifest>item"`
+	Spine     []*ItemRef      `xml:"spine>itemref"`
+	Guides    []Guide         `xml:"guide>reference"`
 }
 
-type Manifest struct {
-	Href string `xml:"href,attr"`
-	Id   string `xml:"id,attr"`
+func (opf *OPF) findNavDoc() *ManifestItem {
+	for _, item := range opf.Manifests {
+		if item.Properties == "nav" {
+			return item
+		}
+	}
+	return nil
+}
+
+type ItemRef struct {
+	Idref string `xml:"idref,attr"`
+}
+
+type ManifestItem struct {
+	Href      string `xml:"href,attr"`
+	Id        string `xml:"id,attr"`
+	MediaType string `xml:"media-type,attr"`
+	Properties string `xml:"properties,attr"`
 }
 
 type Guide struct {
@@ -39,12 +70,13 @@ type Guide struct {
 }
 
 type NCX struct {
-	NavMap     []*NavPoint `xml:"navMap>navPoint"`
-	Guides     []Guide     `xml:"guide>reference"`
-	Navigation string
-	WorkDir    string
-	OutDir     string
-	GitbookUrl string
+	NavMap     []*NavPoint     `xml:"ncx>navMap>navPoint"`
+	Guides     []Guide         `xml:"-"`
+	Styles     []*ManifestItem `xml:"-"`
+	Navigation string          `xml:"-"`
+	WorkDir    string          `xml:"-"`
+	OutDir     string          `xml:"-"`
+	GitbookUrl string          `xml:"-"`
 }
 
 type NavPoint struct {
@@ -52,56 +84,65 @@ type NavPoint struct {
 	SubNavPoints []*NavPoint `xml:"navPoint"`
 	Content      content     `xml:"content"`
 
-	NCX      *NCX
-	Depth    int
-	Level    string
-	HtmlPath string // x/a.html
-	Src      string // a.html#1
-	SrcRaw   string // a.html
-	Dir      string // x
-	/*
-	WorkDir    string
-	OutDir     string
-	GitbookUrl string
-	*/
+	NCX      *NCX   `xml:"-"`
+	Depth    int    `xml:"-"`
+	Level    string `xml:"-"`
+	HtmlPath string `xml:"-"` // x/a.html
+	Src      string `xml:"-"` // a.html#1
+	SrcRaw   string `xml:"-"` // a.html
+	Dir      string `xml:"-"` // x
 
-	Next *NavPoint
-	Prev *NavPoint
+	Next *NavPoint `xml:"-"`
+	Prev *NavPoint `xml:"-"`
 
-	Navigation string
+	Navigation string `xml:"-"`
 
 	// read from html
-	HeadLinks string
-	Body      string
+	HeadLinks string `xml:"-"`
+	Body      string `xml:"-"`
 }
 
 type content struct {
 	Src string `xml:"src,attr"`
 }
 
-func NewNcx(ncxPath string, outDir string, gitbook string, guides []Guide) (*NCX, error) {
-	tocFile, _ := os.OpenFile(ncxPath, os.O_RDONLY, 0644)
-	defer tocFile.Close()
-	tocData, _ := ioutil.ReadAll(tocFile)
+func NewNcx(ncxPath string, outDir string, gitbook string, opf *OPF) (*NCX, error) {
 	ncx := &NCX{}
-	err := xml.Unmarshal(tocData, ncx)
-	if err != nil {
-		return nil, err
-	}
 	ncx.WorkDir = path.Dir(ncxPath)
+
+	// generate a ncx file from opf spine section
+	if _, err := os.Stat(ncxPath); os.IsNotExist(err) {
+		// search TOC in OPF first
+		if nav := opf.findNavDoc(); nav != nil {
+
+		} else {
+			// Finally, we have no choose, read spine from OPF
+			ncx.GenerateFromSpine(opf)
+		}
+	} else {
+		tocFile, _ := os.OpenFile(ncxPath, os.O_RDONLY, 0644)
+		defer tocFile.Close()
+		tocData, _ := ioutil.ReadAll(tocFile)
+		err := xml.Unmarshal(tocData, ncx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for _, m := range opf.Manifests {
+		if m.MediaType == MediaTypeCSS {
+			ncx.Styles = append(ncx.Styles, m)
+		}
+	}
+
 	ncx.OutDir = outDir
 	ncx.GitbookUrl = gitbook
 
-	for _, g := range guides {
+	for _, g := range opf.Guides {
 		if g.Type == "cover" {
 			break
 		}
 		href := g.Href
-		ext := path.Ext(href)
-		if ext == ".xhtml" {
-			href = href[0:len(href)-len(ext)] + ".html"
-			os.Rename(path.Join(ncx.WorkDir, g.Href), path.Join(ncx.WorkDir, href))
-		}
 		// TODO fix mismatch url in cover when cover is not in the directory which content in.
 		ncx.NavMap = append([]*NavPoint{&NavPoint{
 			Title: g.Title,
@@ -111,16 +152,11 @@ func NewNcx(ncxPath string, outDir string, gitbook string, guides []Guide) (*NCX
 		}}, ncx.NavMap...)
 	}
 
-	for _, g := range guides {
+	for _, g := range opf.Guides {
 		if g.Type != "cover" {
 			continue
 		}
 		href := g.Href
-		ext := path.Ext(href)
-		if ext == ".xhtml" {
-			href = href[0:len(href)-len(ext)] + ".html"
-			os.Rename(path.Join(ncx.WorkDir, g.Href), path.Join(ncx.WorkDir, href))
-		}
 		// TODO fix mismatch url in cover when cover is not in the directory which content in.
 		ncx.NavMap = append([]*NavPoint{&NavPoint{
 			Title: g.Title,
@@ -132,6 +168,46 @@ func NewNcx(ncxPath string, outDir string, gitbook string, guides []Guide) (*NCX
 
 	ncx.UpdateNavMap()
 	return ncx, nil
+}
+
+func (ncx *NCX) GenerateFromSpine(opf *OPF) {
+	for _, item := range opf.Spine {
+		mf := opf.findManifestItem(item.Idref)
+		htmlPath := path.Join(ncx.WorkDir, mf.Href)
+		np := &NavPoint{
+			Title: findTitle(htmlPath),
+			Content: content{
+				Src: mf.Href,
+			},
+		}
+		ncx.NavMap = append(ncx.NavMap, np)
+	}
+}
+
+func findTitle(htmlPath string) (title string) {
+	htmlFile, err := os.OpenFile(htmlPath, os.O_RDONLY, 0644)
+	if err != nil {
+		panic(err)
+	}
+	defer htmlFile.Close()
+	doc, err := goquery.NewDocumentFromReader(htmlFile)
+	if err != nil {
+		panic(err)
+	}
+	title = doc.Find("title").Text()
+	if len(title) > 128 {
+		title = path.Base(htmlPath)
+	}
+	return
+}
+
+func (opf *OPF) findManifestItem(id string) *ManifestItem {
+	for _, item := range opf.Manifests {
+		if item.Id == id {
+			return item
+		}
+	}
+	return nil
 }
 
 func (ncx *NCX) Render() (first *NavPoint, err error) {
@@ -154,7 +230,8 @@ func (ncx *NCX) Render() (first *NavPoint, err error) {
 
 func (ncx *NCX) RenderNavigation(np *NavPoint) (string, error) {
 	var buf bytes.Buffer
-	naviFile, err := os.OpenFile("./template/navigation.html", os.O_RDONLY, 0644)
+	//naviFile, err := os.OpenFile("./template/navigation.html", os.O_RDONLY, 0644)
+	naviFile, err := templatefs.Open("/navigation.html")
 	if err != nil {
 		return "", err
 	}
@@ -166,6 +243,7 @@ func (ncx *NCX) RenderNavigation(np *NavPoint) (string, error) {
 	tmpl, err := template.New("navi").Funcs(
 		template.FuncMap{
 			"rel": np.RelativePath,
+			"ext": np.UpdateExt,
 		},
 	).Parse(string(navi))
 	if err != nil {
@@ -228,7 +306,8 @@ func (ncx *NCX) updateNavPoint(prev *NavPoint, nav *NavPoint, depth int, index i
 func (np *NavPoint) RenderPage(navi string) (string, error) {
 	var buf bytes.Buffer
 
-	pageFile, err := os.OpenFile("./template/page.html", os.O_RDONLY, 0644)
+	// pageFile, err := os.OpenFile("./template/page.html", os.O_RDONLY, 0644)
+	pageFile, err := templatefs.Open("/page.html")
 	if err != nil {
 		return "", err
 	}
@@ -242,6 +321,7 @@ func (np *NavPoint) RenderPage(navi string) (string, error) {
 			"next": np.FindNextHtml,
 			"prev": np.FindPrevHtml,
 			"rel":  np.RelativePath,
+			"ext":  np.UpdateExt,
 			"now":  now,
 		},
 	).Parse(string(page))
@@ -252,6 +332,12 @@ func (np *NavPoint) RenderPage(navi string) (string, error) {
 	err = np.loadHtml()
 	if err != nil {
 		return "", err
+	}
+	// TODO just workaround for load all styles
+	// should load styles from new page
+	for _, style := range np.NCX.Styles {
+		rel, _ := filepath.Rel(np.Dir, style.Href)
+		np.HeadLinks = fmt.Sprintf(`%s<link href="%s" rel="stylesheet" type="text/css">`, np.HeadLinks, rel)
 	}
 	err = tmpl.Execute(&buf, np)
 	if err != nil {
@@ -269,6 +355,11 @@ func (np *NavPoint) save(data string) error {
 	outDir := path.Dir(outPath)
 	if _, err := os.Stat(outDir); os.IsNotExist(err) {
 		os.MkdirAll(outDir, os.ModePerm)
+	}
+	if path.Ext(outPath) == ".xhtml" {
+		idx := strings.LastIndex(outPath, ".")
+		os.Remove(outPath)
+		outPath = fmt.Sprintf("%s.html", outPath[:idx])
 	}
 	return ioutil.WriteFile(outPath, []byte(data), 0644)
 }
@@ -288,6 +379,7 @@ func (np *NavPoint) loadHtml() error {
 	if err != nil {
 		return err
 	}
+	/*
 	np.HeadLinks, err = doc.Find("head").First().Html()
 	if err != nil {
 		return err
@@ -300,6 +392,7 @@ func (np *NavPoint) loadHtml() error {
 			np.HeadLinks += v
 		}
 	}
+	*/
 	return nil
 }
 
@@ -331,7 +424,23 @@ func (np *NavPoint) RelativePath(npx *NavPoint) string {
 	return rel
 }
 
+func (np *NavPoint) UpdateExt(orig string) string {
+	if path.Ext(orig) == ".xhtml" {
+		idx := strings.LastIndex(orig, ".")
+		orig = fmt.Sprintf("%s.html", orig[:idx])
+	}
+	return orig
+}
+
 func now() string {
 	t := time.Now()
 	return t.Format("2006-01-02T15:04:05Z07:00")
+}
+
+func init() {
+	var err error
+	templatefs, err = fs.New()
+	if err != nil {
+		panic(err)
+	}
 }

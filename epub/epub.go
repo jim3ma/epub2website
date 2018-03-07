@@ -9,7 +9,7 @@ import (
 	"github.com/otiai10/copy"
 )
 
-func Transfer(outputDir, unzipDir, gitbookUrl string) (string, error ){
+func Convert(outputDir, unzipDir, gitbookUrl string) (string, error ){
 	metaFile, err := os.OpenFile(path.Join(unzipDir, "META-INF", "container.xml"), os.O_RDONLY, 0644)
 	if err != nil {
 		return "", err
@@ -39,7 +39,10 @@ func Transfer(outputDir, unzipDir, gitbookUrl string) (string, error ){
 		return "", err
 	}
 	ncxPath := path.Join(unzipDir, path.Dir(metaInfo.RootFile.Path), "toc.ncx")
-	ncx, _ := NewNcx(ncxPath, outputDir, gitbookUrl, opf.Guides)
+	ncx, err := NewNcx(ncxPath, outputDir, gitbookUrl, opf)
+	if err != nil {
+		return "", err
+	}
 	firstPage, err := ncx.Render()
 	if err != nil {
 		return "", err

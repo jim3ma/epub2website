@@ -24,11 +24,13 @@
     <link rel="apple-touch-icon-precomposed" sizes="152x152"
           href="{{ .NCX.GitbookUrl }}gitbook/images/apple-touch-icon-precomposed-152.png">
     <link rel="shortcut icon" href="{{ .NCX.GitbookUrl }}gitbook/images/favicon.ico" type="image/x-icon">
-{{- if .Next }}
-    <link rel="next" href="{{ .Next.Src }}"/>
+{{- $p := prev }}
+{{- $n := next }}
+{{- if $n }}
+    <link rel="next" href="{{ $n | rel | ext }}"/>
 {{- end -}}
-{{- if .Prev }}
-    <link rel="prev" href="{{ .Prev.Src }}"/>
+{{- if $p }}
+    <link rel="prev" href="{{ $p | rel | ext }}"/>
 {{- end }}
 </head>
 <body>
@@ -45,7 +47,7 @@
                 <!-- Title -->
                 <h1>
                     <i class="fa fa-circle-o-notch fa-spin"></i>
-                    <a href="{{ .Src }}">{{ .Title }}</a>
+                    <a href="{{ .Src | ext }}">{{ .Title }}</a>
                 </h1>
             </div>
             <div class="page-wrapper" tabindex="-1" role="main">
@@ -65,32 +67,35 @@
                             </section>
                         </div>
                         <div class="search-results">
-                            <div class="has-results"><h1 class="search-results-title"><span
-                                    class='search-results-count'></span> results
-                                matching "<span class='search-query'></span>"</h1>
+                            <div class="has-results">
+                                <h1 class="search-results-title">
+                                    <span class='search-results-count'></span>
+                                    results matching "<span class='search-query'></span>"
+                                </h1>
                                 <ul class="search-results-list"></ul>
                             </div>
-                            <div class="no-results"><h1 class="search-results-title">No results matching "<span
-                                    class='search-query'></span>"
-                            </h1></div>
+                            <div class="no-results">
+                                <h1 class="search-results-title">
+                                    No results matching "<span class='search-query'></span>"
+                                </h1>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    {{ $p := prev }}
     {{- if $p }}
-        <a href="{{ $p | rel }}" class="navigation navigation-prev " aria-label="Previous page: {{ $p.Title}}">
+        <a href="{{ $p | rel | ext}}" class="navigation navigation-prev{{if not $n}} navigation-unique{{end}}"
+           aria-label="Previous page: {{ $p.Title}}">
             <i class="fa fa-angle-left"></i>
         </a>
     {{- end -}}
-    {{ $n := next }}
     {{- if $n }}
-        <a href="{{ $n | rel }}" class="navigation navigation-next " aria-label="Next page: {{ $n.Title}}">
+        <a href="{{ $n | rel | ext}}" class="navigation navigation-next{{if not $p}} navigation-unique{{end}}"
+           aria-label="Next page: {{ $n.Title}}">
             <i class="fa fa-angle-right"></i>
         </a>
     {{- end }}
-
     </div>
 
     <div class="back-to-top" style="display: block;"><i class="fa fa-arrow-up"></i></div>
