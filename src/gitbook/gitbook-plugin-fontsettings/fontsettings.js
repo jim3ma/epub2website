@@ -252,6 +252,14 @@ require(['gitbook', 'jquery'], function(gitbook, $) {
         });
     }
 
+    gitbook.toolbar.createButton({
+        icon: 'fa fa-search',
+        onClick: function() {
+            $('.book').addClass('with-summary')
+            $('#book-search-input input').focus();
+        }
+    });
+
     // Init configuration at start
     gitbook.events.bind('start', function(e, config) {
         var opts = config.fontsettings;

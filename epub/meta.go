@@ -427,8 +427,7 @@ func (np *NavPoint) RenderPage(navi string) (string, error) {
 	// TODO just workaround for load all styles
 	// should load styles from new page
 	for _, style := range np.NCX.Styles {
-		rel, _ := filepath.Rel(np.Dir, style.Href)
-		np.HeadLinks = fmt.Sprintf(`%s<link href="%s" rel="stylesheet" type="text/css">`, np.HeadLinks, rel)
+		np.HeadLinks = fmt.Sprintf(`%s<link href="%s" rel="stylesheet" type="text/css">`, np.HeadLinks, style.Href)
 	}
 	err = tmpl.Execute(&buf, np)
 	if err != nil {
