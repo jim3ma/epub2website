@@ -44,6 +44,9 @@
   line-height: 30px;
   font-size: 1em;
 }
+.font-wide {
+  font-size: 1.8em;
+}
 .book.color-theme-1 .book-body {
   color: #704214;
   background: #f3eacb;

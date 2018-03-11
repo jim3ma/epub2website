@@ -2,6 +2,9 @@ require(['gitbook', 'jquery'], function(gitbook, $) {
     // Configuration
     var MAX_SIZE       = 4,
         MIN_SIZE       = 0,
+        MAX_WIDE       = 1600,
+        MIN_WIDE       = 800,
+        STEP_WIDE      = 80,
         BUTTON_ID;
 
     // Current fontsettings state
@@ -86,6 +89,26 @@ require(['gitbook', 'jquery'], function(gitbook, $) {
         saveFontSettings();
     }
 
+    // Increase page wide
+    function increaseWide(e) {
+        e.preventDefault();
+        if (fontState.wide >= MAX_WIDE) return;
+
+        fontState.wide = fontState.wide + STEP_WIDE;
+        console.log('in wide' + fontState.wide)
+        saveFontSettings();
+    }
+
+    // Decrease page wide
+    function decreaseWide(e) {
+        e.preventDefault();
+        if (fontState.wide <= MIN_WIDE) return;
+
+        fontState.wide = fontState.wide - STEP_WIDE;
+        console.log('de wide' + fontState.wide)
+        saveFontSettings();
+    }
+
     // Change font family
     function changeFontFamily(configName, e) {
         if (e && e instanceof Event) {
@@ -154,6 +177,9 @@ require(['gitbook', 'jquery'], function(gitbook, $) {
             $book[0].className = $book[0].className.replace(/\bcolor-theme-\S+/g, '');
             $book.addClass('color-theme-'+fontState.theme);
         }
+        console.log(fontState.wide);
+        wide = fontState.wide || 800;
+        $('.page-inner').css( "maxWidth", wide);
     }
 
     function init(config) {
@@ -164,6 +190,7 @@ require(['gitbook', 'jquery'], function(gitbook, $) {
         // Instantiate font state object
         fontState = gitbook.storage.get('fontState', {
             size:   config.size || 2,
+            wide:   config.wide || 800,
             family: configFamily,
             theme:  configTheme
         });
@@ -195,6 +222,18 @@ require(['gitbook', 'jquery'], function(gitbook, $) {
                         onClick: enlargeFontSize
                     }
                 ],
+                [
+                    {
+                        text: 'Narrow',
+                        //className: 'font-enlarge',
+                        onClick: decreaseWide
+                    },
+                    {
+                        text: 'Wide',
+                        //className: 'font-enlarge',
+                        onClick: increaseWide
+                    }
+                ],
                 $.map(FAMILIES, function(family) {
                     family.onClick = function(e) {
                         return changeFontFamily(family.config, e);
@@ -224,8 +263,14 @@ require(['gitbook', 'jquery'], function(gitbook, $) {
         init(opts);
     });
 
+    gitbook.events.on('page.change', function() {
+        update();
+    });
+
     // Expose API
     gitbook.fontsettings = {
+        decreaseWide:    decreaseWide,
+        increaseWide:    increaseWide,
         enlargeFontSize: enlargeFontSize,
         reduceFontSize:  reduceFontSize,
         setTheme:        changeColorTheme,
@@ -236,5 +281,3 @@ require(['gitbook', 'jquery'], function(gitbook, $) {
         setFamilies:     setFamilies
     };
 });
-
-
