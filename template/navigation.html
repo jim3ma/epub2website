@@ -1,7 +1,7 @@
 {{- define "chapter"}}
     {{- range .}}
-<li class="chapter" data-level="{{ .Level}}" data-path="{{ . | rel | ext }}">
-    <a href="{{ . | rel | ext }}">{{ .Title}}</a>
+<li class="chapter" data-level="{{ .Level}}" data-path="{{ . | base | ext }}">
+    <a href="{{ . | base | ext }}">{{ .Title}}</a>
     {{- if .SubNavPoints }}
     {{template "articles" .SubNavPoints}}
     {{- end}}

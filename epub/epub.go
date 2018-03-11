@@ -48,5 +48,6 @@ func Convert(outputDir, unzipDir, gitbookUrl string) (string, error ){
 	if err != nil {
 		return "", err
 	}
-	return firstPage.UpdateExt(firstPage.HtmlPath), nil
+	ncx.BuildIndex()
+	return firstPage.UpdateExt(firstPage.Src), nil
 }

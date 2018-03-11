@@ -16,6 +16,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/rakyll/statik/fs"
 	_ "github.com/jim3ma/epub2website/statik"
+	"encoding/json"
 )
 
 const (
@@ -89,8 +90,8 @@ type NavPoint struct {
 	Depth    int    `xml:"-"`
 	Level    string `xml:"-"`
 	HtmlPath string `xml:"-"` // x/a.html
-	Src      string `xml:"-"` // a.html#1
-	SrcRaw   string `xml:"-"` // a.html
+	Src      string `xml:"-"` // a.html
+	SrcRaw   string `xml:"-"` // a.html#1
 	Dir      string `xml:"-"` // x
 
 	Next *NavPoint `xml:"-"`
@@ -188,7 +189,7 @@ func (ncx *NCX) GenerateFromNavDoc(navDoc *NavDoc, relPath string) {
 	}
 }
 
-func buildNavPointFromNavItem(item *ItemInner, relPath string)(np *NavPoint) {
+func buildNavPointFromNavItem(item *ItemInner, relPath string) (np *NavPoint) {
 	np = &NavPoint{
 		Title: item.Anchor.Title,
 		Content: content{
@@ -198,7 +199,7 @@ func buildNavPointFromNavItem(item *ItemInner, relPath string)(np *NavPoint) {
 	if item.SubItem == nil {
 		return
 	}
-	for _, sub := range item.SubItem.ItemInner{
+	for _, sub := range item.SubItem.ItemInner {
 		subnp := buildNavPointFromNavItem(sub, relPath)
 		np.SubNavPoints = append(np.SubNavPoints, subnp)
 	}
@@ -280,11 +281,38 @@ func (ncx *NCX) Render() (first *NavPoint, err error) {
 	return first, nil
 }
 
+type DocIndex struct {
+	Url      string `json:"url"`
+	Title    string `json:"title"`
+	Keywords string `json:"keywords"`
+	Body     string `json:"body"`
+}
+
+
 func (ncx *NCX) BuildIndex() (err error) {
 	navPoint := ncx.NavMap[0]
-	for navPoint != nil {
-		navPoint = navPoint.Next
+	indexs := make(map[string]*DocIndex)
+	indexed := make(map[string]string)
+	for ; navPoint != nil; navPoint = navPoint.Next {
+		if _, ok := indexed[navPoint.Src]; ok {
+			continue
+		}
+		indexed[navPoint.Src] = ""
+		buf := bytes.NewBufferString(navPoint.Body)
+		doc, err := goquery.NewDocumentFromReader(buf)
+		if err != nil {
+			panic(err)
+		}
+		url := navPoint.UpdateExt(navPoint.Src)
+		indexs[url] = &DocIndex{
+			Url:      url,
+			Title:    navPoint.Title,
+			Keywords: "",
+			Body:     doc.Text(),
+		}
 	}
+	data, _ := json.Marshal(indexs)
+	ioutil.WriteFile(path.Join(ncx.OutDir, "search_plus_index.json"), data, 0644)
 	return nil
 }
 
@@ -302,8 +330,9 @@ func (ncx *NCX) RenderNavigation(np *NavPoint) (string, error) {
 	}
 	tmpl, err := template.New("navi").Funcs(
 		template.FuncMap{
-			"rel": np.RelativePath,
-			"ext": np.UpdateExt,
+			"rel":  np.RelativePath,
+			"ext":  np.UpdateExt,
+			"base": np.BasePath,
 		},
 	).Parse(string(navi))
 	if err != nil {
@@ -381,6 +410,7 @@ func (np *NavPoint) RenderPage(navi string) (string, error) {
 			"next": np.FindNextHtml,
 			"prev": np.FindPrevHtml,
 			"rel":  np.RelativePath,
+			"base": np.BasePath,
 			"ext":  np.UpdateExt,
 			"trim": np.TrimHash,
 			"now":  now,
@@ -411,7 +441,7 @@ func (np *NavPoint) RenderPage(navi string) (string, error) {
 }
 
 func (np *NavPoint) save(data string) error {
-	outPath := path.Join(np.NCX.OutDir, np.HtmlPath)
+	outPath := path.Join(np.NCX.OutDir, np.Src)
 	//fmt.Println(outPath)
 	outDir := path.Dir(outPath)
 	if _, err := os.Stat(outDir); os.IsNotExist(err) {
@@ -419,7 +449,7 @@ func (np *NavPoint) save(data string) error {
 	}
 	if path.Ext(outPath) == ".xhtml" {
 		idx := strings.LastIndex(outPath, ".")
-		os.Remove(outPath)
+		os.Remove(path.Join(np.NCX.OutDir, np.HtmlPath))
 		outPath = fmt.Sprintf("%s.html", outPath[:idx])
 	}
 	return ioutil.WriteFile(outPath, []byte(data), 0644)
@@ -456,6 +486,46 @@ func (np *NavPoint) loadHtml() error {
 		}
 	default:
 		panic(fmt.Sprintf("unsupported file type: %s", htmlPath))
+	}
+	buf := bytes.NewBufferString(np.Body)
+	doc, err := goquery.NewDocumentFromReader(buf)
+	// TODO update image src
+	doc.Find("img").Each(func(i int, s *goquery.Selection) {
+		src, exist := s.Attr("src")
+		if !exist {
+			return
+		}
+		newSrc := path.Join(np.Dir, path.Join(src))
+		s.SetAttr("src", newSrc)
+	})
+	doc.Find("image").Each(func(i int, s *goquery.Selection) {
+		src, exist := s.Attr("href")
+		if !exist {
+			return
+		}
+		newSrc := path.Join(np.Dir, path.Join(src))
+		s.SetAttr("href", newSrc)
+	})
+	// TODO update link href
+	// 1. path
+	// 2. ext
+	doc.Find("a").Each(func(i int, s *goquery.Selection) {
+		href, exist := s.Attr("href")
+		if !exist {
+			return
+		}
+		if path.IsAbs(href) ||
+			strings.HasPrefix(href,"http://") ||
+			strings.HasPrefix(href,"https://") ||
+			strings.HasPrefix(href,"//") ||
+			strings.HasPrefix(href,"#") {
+			return
+		}
+		s.SetAttr("href", np.UpdateExt(path.Base(href)))
+	})
+	np.Body, err = doc.Html()
+	if err != nil {
+		panic(err)
 	}
 	/*
 	np.HeadLinks, err = doc.Find("head").First().Html()
@@ -502,16 +572,20 @@ func (np *NavPoint) RelativePath(npx *NavPoint) string {
 	return rel
 }
 
+func (np *NavPoint) BasePath(npx *NavPoint) string {
+	return path.Base(npx.Content.Src)
+}
+
 func (np *NavPoint) UpdateExt(orig string) string {
 	if strings.HasPrefix(path.Ext(orig),".xhtml") {
 		idx := strings.LastIndex(orig, ".")
-		orig = strings.Replace(orig,".xhtml", ".html", idx)
+		orig = strings.Replace(orig, ".xhtml", ".html", idx)
 	}
 	return orig
 }
 
 func (np *NavPoint) TrimHash(orig string) string {
-	if strings.Contains(orig, "html#"){
+	if strings.Contains(orig, "html#") {
 		idx := strings.LastIndex(orig, "#")
 		orig = orig[:idx]
 	}
