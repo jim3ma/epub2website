@@ -41,6 +41,7 @@ type OPF struct {
 	Manifests []*ManifestItem `xml:"manifest>item"`
 	Spine     []*ItemRef      `xml:"spine>itemref"`
 	Guides    []Guide         `xml:"guide>reference"`
+	Dir       string
 }
 
 func (opf *OPF) findNavDoc() *ManifestItem {
@@ -57,9 +58,9 @@ type ItemRef struct {
 }
 
 type ManifestItem struct {
-	Href      string `xml:"href,attr"`
-	Id        string `xml:"id,attr"`
-	MediaType string `xml:"media-type,attr"`
+	Href       string `xml:"href,attr"`
+	Id         string `xml:"id,attr"`
+	MediaType  string `xml:"media-type,attr"`
 	Properties string `xml:"properties,attr"`
 }
 
@@ -70,7 +71,7 @@ type Guide struct {
 }
 
 type NCX struct {
-	NavMap     []*NavPoint     `xml:"ncx>navMap>navPoint"`
+	NavMap     []*NavPoint     `xml:"navMap>navPoint"`
 	Guides     []Guide         `xml:"-"`
 	Styles     []*ManifestItem `xml:"-"`
 	Navigation string          `xml:"-"`
@@ -114,7 +115,8 @@ func NewNcx(ncxPath string, outDir string, gitbook string, opf *OPF) (*NCX, erro
 	if _, err := os.Stat(ncxPath); os.IsNotExist(err) {
 		// search TOC in OPF first
 		if nav := opf.findNavDoc(); nav != nil {
-
+			navDoc := LoadNavDoc(path.Join(ncx.WorkDir, nav.Href))
+			ncx.GenerateFromNavDoc(navDoc, path.Dir(nav.Href))
 		} else {
 			// Finally, we have no choose, read spine from OPF
 			ncx.GenerateFromSpine(opf)
@@ -168,6 +170,39 @@ func NewNcx(ncxPath string, outDir string, gitbook string, opf *OPF) (*NCX, erro
 
 	ncx.UpdateNavMap()
 	return ncx, nil
+}
+
+func (ncx *NCX) GenerateFromNavDoc(navDoc *NavDoc, relPath string) {
+	var nav *Nav
+	for _, v := range navDoc.Body.Nav {
+		if v.Type == "toc" {
+			nav = v
+		}
+	}
+	if nav == nil {
+		panic("error nav doc")
+	}
+	for _, item := range nav.Item.ItemInner {
+		np := buildNavPointFromNavItem(item, relPath)
+		ncx.NavMap = append(ncx.NavMap, np)
+	}
+}
+
+func buildNavPointFromNavItem(item *ItemInner, relPath string)(np *NavPoint) {
+	np = &NavPoint{
+		Title: item.Anchor.Title,
+		Content: content{
+			Src: path.Join(relPath, item.Anchor.Href),
+		},
+	}
+	if item.SubItem == nil {
+		return
+	}
+	for _, sub := range item.SubItem.ItemInner{
+		subnp := buildNavPointFromNavItem(sub, relPath)
+		np.SubNavPoints = append(np.SubNavPoints, subnp)
+	}
+	return
 }
 
 func (ncx *NCX) GenerateFromSpine(opf *OPF) {
@@ -322,6 +357,7 @@ func (np *NavPoint) RenderPage(navi string) (string, error) {
 			"prev": np.FindPrevHtml,
 			"rel":  np.RelativePath,
 			"ext":  np.UpdateExt,
+			"trim": np.TrimHash,
 			"now":  now,
 		},
 	).Parse(string(page))
@@ -425,9 +461,17 @@ func (np *NavPoint) RelativePath(npx *NavPoint) string {
 }
 
 func (np *NavPoint) UpdateExt(orig string) string {
-	if path.Ext(orig) == ".xhtml" {
+	if strings.HasPrefix(path.Ext(orig),".xhtml") {
 		idx := strings.LastIndex(orig, ".")
-		orig = fmt.Sprintf("%s.html", orig[:idx])
+		orig = strings.Replace(orig,".xhtml", ".html", idx)
+	}
+	return orig
+}
+
+func (np *NavPoint) TrimHash(orig string) string {
+	if strings.Contains(orig, "html#"){
+		idx := strings.LastIndex(orig, "#")
+		orig = orig[:idx]
 	}
 	return orig
 }

@@ -56,15 +56,17 @@
                         <div class="search-noresults">
                             <section class="normal markdown-section">
                             {{ .Body}}
-                                <footer class="page-footer">
+                            </section>
+                            <!--
+                            <footer class="page-footer">
                                     <span class="copyright">
                                         Copyright © jim.plus 2017-2018 all right reserved, powered by Gitbook
                                     </span>
                                     <span class="footer-modification">
                                         Updated at {{ now }}
                                     </span>
-                                </footer>
-                            </section>
+                            </footer>
+                            -->
                         </div>
                         <div class="search-results">
                             <div class="has-results">
@@ -85,13 +87,13 @@
             </div>
         </div>
     {{- if $p }}
-        <a href="{{ $p | rel | ext}}" class="navigation navigation-prev{{if not $n}} navigation-unique{{end}}"
+        <a href="{{ $p | rel | trim | ext}}" class="navigation navigation-prev{{if not $n}} navigation-unique{{end}}"
            aria-label="Previous page: {{ $p.Title}}">
             <i class="fa fa-angle-left"></i>
         </a>
     {{- end -}}
     {{- if $n }}
-        <a href="{{ $n | rel | ext}}" class="navigation navigation-next{{if not $p}} navigation-unique{{end}}"
+        <a href="{{ $n | rel | trim | ext}}" class="navigation navigation-next{{if not $p}} navigation-unique{{end}}"
            aria-label="Next page: {{ $n.Title}}">
             <i class="fa fa-angle-right"></i>
         </a>

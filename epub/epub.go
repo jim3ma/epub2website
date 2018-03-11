@@ -29,6 +29,7 @@ func Convert(outputDir, unzipDir, gitbookUrl string) (string, error ){
 	opfData, _ := ioutil.ReadAll(opfFile)
 	opf := &OPF{}
 	err = xml.Unmarshal(opfData, opf)
+	opf.Dir = path.Dir(metaInfo.RootFile.Path)
 	if err != nil {
 		return "", err
 	}
@@ -47,5 +48,5 @@ func Convert(outputDir, unzipDir, gitbookUrl string) (string, error ){
 	if err != nil {
 		return "", err
 	}
-	return firstPage.HtmlPath, nil
+	return firstPage.UpdateExt(firstPage.HtmlPath), nil
 }
