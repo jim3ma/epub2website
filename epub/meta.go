@@ -225,13 +225,30 @@ func findTitle(htmlPath string) (title string) {
 		panic(err)
 	}
 	defer htmlFile.Close()
-	doc, err := goquery.NewDocumentFromReader(htmlFile)
-	if err != nil {
-		panic(err)
-	}
-	title = doc.Find("title").Text()
-	if len(title) > 128 {
-		title = path.Base(htmlPath)
+	ext := path.Ext(htmlPath)
+	switch ext {
+	case ".xhtml":
+		data, err := ioutil.ReadAll(htmlFile)
+		if err != nil {
+			panic(err)
+		}
+		x := xhtml{}
+		err = xml.Unmarshal(data, &x)
+		if err != nil {
+			panic(err)
+		}
+		title = x.Title
+	case ".html":
+		doc, err := goquery.NewDocumentFromReader(htmlFile)
+		if err != nil {
+			panic(err)
+		}
+		title = doc.Find("title").Text()
+		if len(title) > 128 {
+			title = path.Base(htmlPath)
+		}
+	default:
+		panic(fmt.Sprintf("unsupported file type: %s", htmlPath))
 	}
 	return
 }
@@ -261,6 +278,14 @@ func (ncx *NCX) Render() (first *NavPoint, err error) {
 		navPoint = navPoint.Prev
 	}
 	return first, nil
+}
+
+func (ncx *NCX) BuildIndex() (err error) {
+	navPoint := ncx.NavMap[0]
+	for navPoint != nil {
+		navPoint = navPoint.Next
+	}
+	return nil
 }
 
 func (ncx *NCX) RenderNavigation(np *NavPoint) (string, error) {
@@ -407,13 +432,30 @@ func (np *NavPoint) loadHtml() error {
 		return err
 	}
 	defer htmlFile.Close()
-	doc, err := goquery.NewDocumentFromReader(htmlFile)
-	if err != nil {
-		return err
-	}
-	np.Body, err = doc.Find("body").First().Html()
-	if err != nil {
-		return err
+	ext := path.Ext(htmlPath)
+	switch ext {
+	case ".xhtml":
+		data, err := ioutil.ReadAll(htmlFile)
+		if err != nil {
+			panic(err)
+		}
+		x := xhtml{}
+		err = xml.Unmarshal(data, &x)
+		if err != nil {
+			panic(err)
+		}
+		np.Body = x.Body.Inner
+	case ".html":
+		doc, err := goquery.NewDocumentFromReader(htmlFile)
+		if err != nil {
+			return err
+		}
+		np.Body, err = doc.Find("body").First().Html()
+		if err != nil {
+			return err
+		}
+	default:
+		panic(fmt.Sprintf("unsupported file type: %s", htmlPath))
 	}
 	/*
 	np.HeadLinks, err = doc.Find("head").First().Html()

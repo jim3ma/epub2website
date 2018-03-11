@@ -12,8 +12,11 @@
     <link rel="stylesheet" href="{{ .NCX.GitbookUrl }}gitbook/gitbook-plugin-back-to-top-button/plugin.css">
     <link rel="stylesheet" href="{{ .NCX.GitbookUrl }}gitbook/gitbook-plugin-page-toc-button/plugin.css">
     <link rel="stylesheet" href="{{ .NCX.GitbookUrl }}gitbook/gitbook-plugin-highlight/website.css">
+    <!--
     <link rel="stylesheet" href="{{ .NCX.GitbookUrl }}gitbook/gitbook-plugin-search/search.css">
+    -->
     <link rel="stylesheet" href="{{ .NCX.GitbookUrl }}gitbook/gitbook-plugin-fontsettings/website.css">
+    <link rel="stylesheet" href="{{ .NCX.GitbookUrl }}gitbook/gitbook-plugin-expandable-chapters/expandable-chapters.css">
 {{- if .HeadLinks }}
     {{ .HeadLinks }}
 {{- end }}
@@ -197,11 +200,14 @@
 <script src="{{ .NCX.GitbookUrl }}gitbook/theme.js"></script>
 <script src="{{ .NCX.GitbookUrl }}gitbook/gitbook-plugin-back-to-top-button/plugin.js"></script>
 <script src="{{ .NCX.GitbookUrl }}gitbook/gitbook-plugin-page-toc-button/plugin.js"></script>
+<!--
 <script src="{{ .NCX.GitbookUrl }}gitbook/gitbook-plugin-search/search-engine.js"></script>
 <script src="{{ .NCX.GitbookUrl }}gitbook/gitbook-plugin-search/search.js"></script>
 <script src="{{ .NCX.GitbookUrl }}gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
 <script src="{{ .NCX.GitbookUrl }}gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+-->
 <script src="{{ .NCX.GitbookUrl }}gitbook/gitbook-plugin-sharing/buttons.js"></script>
 <script src="{{ .NCX.GitbookUrl }}gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+<script src="{{ .NCX.GitbookUrl }}gitbook/gitbook-plugin-expandable-chapters/expandable-chapters.js"></script>
 </body>
 </html>
