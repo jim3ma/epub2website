@@ -102,6 +102,8 @@ type NavPoint struct {
 	// read from html
 	HeadLinks string `xml:"-"`
 	Body      string `xml:"-"`
+
+	from      string
 }
 
 type content struct {
@@ -147,12 +149,14 @@ func NewNcx(ncxPath string, outDir string, gitbook string, opf *OPF) (*NCX, erro
 		}
 		href := g.Href
 		// TODO fix mismatch url in cover when cover is not in the directory which content in.
-		ncx.NavMap = append([]*NavPoint{&NavPoint{
-			Title: g.Title,
-			Content: content{
-				Src: href,
-			},
-		}}, ncx.NavMap...)
+		ncx.NavMap = append([]*NavPoint{
+			{
+				Title: g.Title,
+				Content: content{
+					Src: href,
+				},
+				from: "guide",
+			}}, ncx.NavMap...)
 	}
 
 	for _, g := range opf.Guides {
@@ -161,15 +165,34 @@ func NewNcx(ncxPath string, outDir string, gitbook string, opf *OPF) (*NCX, erro
 		}
 		href := g.Href
 		// TODO fix mismatch url in cover when cover is not in the directory which content in.
-		ncx.NavMap = append([]*NavPoint{&NavPoint{
-			Title: g.Title,
-			Content: content{
-				Src: href,
-			},
-		}}, ncx.NavMap...)
+		ncx.NavMap = append([]*NavPoint{
+			{
+				Title: g.Title,
+				Content: content{
+					Src: href,
+				},
+				from: "guide",
+			}}, ncx.NavMap...)
 	}
 
 	ncx.UpdateNavMap()
+
+	// remove duplicity node, avoid loop
+	for _, g := range opf.Guides {
+		for p := ncx.NavMap[len(ncx.NavMap)-1];p != nil; p=p.Prev{
+			sharpIdx := strings.Index(g.Href, "#")
+			var src string
+			if sharpIdx == -1 {
+				src = path.Base(g.Href)
+			} else {
+				src = path.Base(g.Href[0:sharpIdx])
+			}
+			if p.Src == src && p.from != "guide" {
+				p.Prev.Next = p.Next
+				p.Next.Prev = p.Prev
+			}
+		}
+	}
 	return ncx, nil
 }
 
@@ -287,7 +310,6 @@ type DocIndex struct {
 	Keywords string `json:"keywords"`
 	Body     string `json:"body"`
 }
-
 
 func (ncx *NCX) BuildIndex() (err error) {
 	navPoint := ncx.NavMap[0]
@@ -505,7 +527,7 @@ func (np *NavPoint) loadHtml() error {
 		newSrc := path.Join(np.Dir, path.Join(src))
 		s.SetAttr("href", newSrc)
 	})
-	// TODO update link href
+	// update link href
 	// 1. path
 	// 2. ext
 	doc.Find("a").Each(func(i int, s *goquery.Selection) {
@@ -514,18 +536,28 @@ func (np *NavPoint) loadHtml() error {
 			return
 		}
 		if path.IsAbs(href) ||
-			strings.HasPrefix(href,"http://") ||
-			strings.HasPrefix(href,"https://") ||
-			strings.HasPrefix(href,"//") ||
-			strings.HasPrefix(href,"#") {
+			strings.HasPrefix(href, "http://") ||
+			strings.HasPrefix(href, "https://") ||
+			strings.HasPrefix(href, "//") ||
+			strings.HasPrefix(href, "#") {
 			return
 		}
 		s.SetAttr("href", np.UpdateExt(path.Base(href)))
 	})
-	np.Body, err = doc.Html()
+	// TODO rename duplication of name css style
+
+	np.Body, err = doc.Selection.Html()
 	if err != nil {
 		panic(err)
 	}
+
+	// TODO remove outer html tag
+	x := xhtml{}
+	err = xml.Unmarshal([]byte(np.Body), &x)
+	if err != nil {
+		panic(err)
+	}
+	np.Body = x.Body.Inner
 	/*
 	np.HeadLinks, err = doc.Find("head").First().Html()
 	if err != nil {
@@ -576,7 +608,7 @@ func (np *NavPoint) BasePath(npx *NavPoint) string {
 }
 
 func (np *NavPoint) UpdateExt(orig string) string {
-	if strings.HasPrefix(path.Ext(orig),".xhtml") {
+	if strings.HasPrefix(path.Ext(orig), ".xhtml") {
 		idx := strings.LastIndex(orig, ".")
 		orig = strings.Replace(orig, ".xhtml", ".html", idx)
 	}
