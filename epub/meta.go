@@ -289,9 +289,9 @@ func (opf *OPF) findManifestItem(id string) *ManifestItem {
 func (ncx *NCX) Render() (first *NavPoint, err error) {
 	navPoint := ncx.NavMap[len(ncx.NavMap)-1]
 	first = ncx.NavMap[0]
+	navi, err := ncx.RenderNavigation(navPoint)
 	// 逆序打印，这样每一页的标题会是第一个指向该页面的标题
 	for navPoint != nil {
-		navi, err := ncx.RenderNavigation(navPoint)
 		if err != nil {
 			return nil, err
 		}
@@ -414,18 +414,18 @@ func (ncx *NCX) updateNavPoint(prev *NavPoint, nav *NavPoint, depth int, index i
 	return
 }
 
-func (np *NavPoint) RenderPage(navi string) (string, error) {
+func (np *NavPoint) RenderPage(navi string) ([]byte, error) {
 	var buf bytes.Buffer
 
 	// pageFile, err := os.OpenFile("./template/page.html", os.O_RDONLY, 0644)
 	pageFile, err := templatefs.Open("/page.html")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer pageFile.Close()
 	page, err := ioutil.ReadAll(pageFile)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	tmpl, err := template.New("page").Funcs(
 		template.FuncMap{
@@ -439,12 +439,12 @@ func (np *NavPoint) RenderPage(navi string) (string, error) {
 		},
 	).Parse(string(page))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	np.Navigation = navi
 	err = np.loadHtml()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	// TODO just workaround for load all styles
 	// should load styles from new page
@@ -453,15 +453,17 @@ func (np *NavPoint) RenderPage(navi string) (string, error) {
 	}
 	err = tmpl.Execute(&buf, np)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	// TODO highlight navigation
-	ret := buf.String()
+	ret := buf.Bytes()
 	np.save(ret)
+	// free memory
+	np.Body = ""
 	return ret, nil
 }
 
-func (np *NavPoint) save(data string) error {
+func (np *NavPoint) save(data []byte) error {
 	outPath := path.Join(np.NCX.OutDir, np.Src)
 	//fmt.Println(outPath)
 	outDir := path.Dir(outPath)
@@ -473,7 +475,7 @@ func (np *NavPoint) save(data string) error {
 		os.Remove(path.Join(np.NCX.OutDir, np.HtmlPath))
 		outPath = fmt.Sprintf("%s.html", outPath[:idx])
 	}
-	return ioutil.WriteFile(outPath, []byte(data), 0644)
+	return ioutil.WriteFile(outPath, data, 0644)
 }
 
 func (np *NavPoint) loadHtml() error {
