@@ -148,10 +148,15 @@ func NewNcx(ncxPath string, outDir string, gitbook string, opf *OPF) (*NCX, erro
 			break
 		}
 		href := g.Href
+		title := g.Title
+		if title == "" {
+			ext := path.Ext(g.Href)
+			title = strings.Replace(path.Base(g.Href), ext, "", 0)
+		}
 		// TODO fix mismatch url in cover when cover is not in the directory which content in.
 		ncx.NavMap = append([]*NavPoint{
 			{
-				Title: g.Title,
+				Title: title,
 				Content: content{
 					Src: href,
 				},
@@ -164,10 +169,15 @@ func NewNcx(ncxPath string, outDir string, gitbook string, opf *OPF) (*NCX, erro
 			continue
 		}
 		href := g.Href
+		title := g.Title
+		if title == "" {
+			ext := path.Ext(g.Href)
+			title = strings.Replace(path.Base(g.Href), ext, "", 0)
+		}
 		// TODO fix mismatch url in cover when cover is not in the directory which content in.
 		ncx.NavMap = append([]*NavPoint{
 			{
-				Title: g.Title,
+				Title: title,
 				Content: content{
 					Src: href,
 				},
@@ -321,6 +331,8 @@ func (ncx *NCX) BuildIndex() (err error) {
 		}
 		indexed[navPoint.Src] = ""
 		buf := bytes.NewBufferString(navPoint.Body)
+		// free here
+		navPoint.Body = ""
 		doc, err := goquery.NewDocumentFromReader(buf)
 		if err != nil {
 			panic(err)
@@ -458,8 +470,8 @@ func (np *NavPoint) RenderPage(navi string) ([]byte, error) {
 	// TODO highlight navigation
 	ret := buf.Bytes()
 	np.save(ret)
-	// free memory
-	np.Body = ""
+	// should not free memory here
+	// np.Body = ""
 	return ret, nil
 }
 
@@ -507,6 +519,10 @@ func (np *NavPoint) loadHtml() error {
 		if err != nil {
 			return err
 		}
+	case ".jpg":
+		rel, _ := filepath.Rel(np.Dir, np.Content.Src)
+		np.Body = fmt.Sprintf(`<img src="%s"/>`, rel)
+		np.Src = strings.Replace(np.Src, ".jpg", ".html", strings.Index(np.Src, ".jpg"))
 	default:
 		panic(fmt.Sprintf("unsupported file type: %s", htmlPath))
 	}
@@ -613,6 +629,10 @@ func (np *NavPoint) UpdateExt(orig string) string {
 	if strings.HasPrefix(path.Ext(orig), ".xhtml") {
 		idx := strings.LastIndex(orig, ".")
 		orig = strings.Replace(orig, ".xhtml", ".html", idx)
+	}
+	if strings.HasPrefix(path.Ext(orig), ".jpg") {
+		idx := strings.LastIndex(orig, ".")
+		orig = strings.Replace(orig, ".jpg", ".html", idx)
 	}
 	return orig
 }
