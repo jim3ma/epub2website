@@ -185,6 +185,10 @@ func NewNcx(ncxPath string, outDir string, gitbook string, opf *OPF) (*NCX, erro
 			}}, ncx.NavMap...)
 	}
 
+	// merge spine into NcxMap for avoiding missing some pages
+	// TODO find right Title in the missing pages
+	ncx.MergeSpine(opf)
+
 	ncx.UpdateNavMap()
 
 	// remove duplicity node, avoid loop
@@ -198,8 +202,12 @@ func NewNcx(ncxPath string, outDir string, gitbook string, opf *OPF) (*NCX, erro
 				src = path.Base(g.Href[0:sharpIdx])
 			}
 			if p.Src == src && p.from != "guide" {
-				p.Prev.Next = p.Next
-				p.Next.Prev = p.Prev
+				if p.Prev != nil {
+					p.Prev.Next = p.Next
+				}
+				if p.Next != nil {
+					p.Next.Prev = p.Prev
+				}
 			}
 		}
 	}
@@ -251,6 +259,126 @@ func (ncx *NCX) GenerateFromSpine(opf *OPF) {
 		}
 		ncx.NavMap = append(ncx.NavMap, np)
 	}
+}
+
+func buildMap(npMap map[string]*NavPoint, nps []*NavPoint) {
+	for _, nav := range nps {
+		key := trimSharp(nav.Content.Src)
+		//fmt.Println(key)
+		npMap[key] = nav
+		if len(nav.SubNavPoints) > 0 {
+			buildMap(npMap, nav.SubNavPoints)
+		}
+	}
+}
+
+func trimSharp(s string) string {
+	sharpIdx := strings.Index(s, "#")
+	if sharpIdx == -1 {
+		return s
+	} else {
+		return s[0:sharpIdx]
+	}
+}
+
+func findSubNav(sub []*NavPoint, src string) bool {
+	for _, nav := range sub {
+		if nav.Content.Src == src {
+			return true
+		}
+		if len(nav.SubNavPoints) > 0 {
+			return findSubNav(nav.SubNavPoints, src)
+		}
+	}
+	return false
+}
+
+func (ncx *NCX) MergeSpine(opf *OPF) {
+	tmpMap := make(map[string]*NavPoint)
+	buildMap(tmpMap, ncx.NavMap)
+	findNav := func(src string) int {
+		for idx, nav := range ncx.NavMap {
+			if nav.Content.Src == src {
+				return idx
+			}
+			if len(nav.SubNavPoints) > 0 {
+				if findSubNav(nav.SubNavPoints, src) {
+					return idx
+				}
+			}
+		}
+		return -1
+	}
+	for idx, item := range opf.Spine {
+		mf := opf.findManifestItem(item.Idref)
+		htmlPath := path.Join(ncx.WorkDir, mf.Href)
+		// check src in NcxMap
+		old, ok := tmpMap[trimSharp(mf.Href)]
+		// not in tmpMap
+		if old == nil && !ok {
+			//fmt.Printf("jim debug: page %s not found\n", mf.Href)
+			nav := &NavPoint{
+				// Spine page may not contain right title, try to find from H1, H2, H3 tag
+				Title: findHTitle(htmlPath),
+				Content: content{
+					Src: mf.Href,
+				},
+			}
+			if idx > 0 {
+				mf2 := opf.findManifestItem(opf.Spine[idx - 1].Idref)
+				idx2 := findNav(mf2.Href)
+				if idx2 != -1 {
+					tmpMap[trimSharp(nav.Content.Src)] = nav
+					ncx.NavMap = append(ncx.NavMap[:idx2+1], append([]*NavPoint{nav}, ncx.NavMap[idx2+1:]...)...)
+				} else {
+					//fmt.Printf("jim debug: prev page %s not found\n", mf2.Href)
+				}
+			} else {
+				tmpMap[trimSharp(nav.Content.Src)] = nav
+				ncx.NavMap = append([]*NavPoint{nav}, ncx.NavMap...)
+			}
+		}
+	}
+}
+
+func findHTitle(htmlPath string) (title string) {
+	htmlFile, err := os.OpenFile(htmlPath, os.O_RDONLY, 0644)
+	if err != nil {
+		panic(err)
+	}
+	defer htmlFile.Close()
+	ext := path.Ext(htmlPath)
+	switch ext {
+	case ".xhtml":
+		data, err := ioutil.ReadAll(htmlFile)
+		if err != nil {
+			panic(err)
+		}
+		x := xhtml{}
+		err = xml.Unmarshal(data, &x)
+		if err != nil {
+			panic(err)
+		}
+		title = x.Title
+	case ".html":
+		doc, err := goquery.NewDocumentFromReader(htmlFile)
+		if err != nil {
+			panic(err)
+		}
+		title = doc.Find("h1").Text()
+		if len(title) > 128 {
+			title = path.Base(htmlPath)
+		}
+		if title == "" {
+			title = doc.Find("h2").Text()
+		}
+		if title == "" {
+			title = doc.Find("h3").Text()
+		}
+	default:
+		panic(fmt.Sprintf("unsupported file type: %s", htmlPath))
+	}
+	return
 }
 
 func findTitle(htmlPath string) (title string) {
