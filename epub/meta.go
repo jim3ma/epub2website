@@ -103,7 +103,7 @@ type NavPoint struct {
 	HeadLinks string `xml:"-"`
 	Body      string `xml:"-"`
 
-	from      string
+	from string
 }
 
 type content struct {
@@ -143,46 +143,34 @@ func NewNcx(ncxPath string, outDir string, gitbook string, opf *OPF) (*NCX, erro
 	ncx.OutDir = outDir
 	ncx.GitbookUrl = gitbook
 
+	var cover *NavPoint
 	for _, g := range opf.Guides {
-		if g.Type == "cover" {
-			break
-		}
 		href := g.Href
 		title := g.Title
 		if title == "" {
 			ext := path.Ext(g.Href)
 			title = strings.Replace(path.Base(g.Href), ext, "", 0)
 		}
-		// TODO fix mismatch url in cover when cover is not in the directory which content in.
-		ncx.NavMap = append([]*NavPoint{
-			{
-				Title: title,
-				Content: content{
-					Src: href,
-				},
-				from: "guide",
-			}}, ncx.NavMap...)
-	}
-
-	for _, g := range opf.Guides {
-		if g.Type != "cover" {
+		if findSubNav(ncx.NavMap, href) {
 			continue
 		}
-		href := g.Href
-		title := g.Title
-		if title == "" {
-			ext := path.Ext(g.Href)
-			title = strings.Replace(path.Base(g.Href), ext, "", 0)
+		nav := &NavPoint{
+			Title: title,
+			Content: content{
+				Src: href,
+			},
+			from: "guide",
 		}
 		// TODO fix mismatch url in cover when cover is not in the directory which content in.
-		ncx.NavMap = append([]*NavPoint{
-			{
-				Title: title,
-				Content: content{
-					Src: href,
-				},
-				from: "guide",
-			}}, ncx.NavMap...)
+		if g.Type == "cover" {
+			cover = nav
+			continue
+		}
+		ncx.NavMap = append([]*NavPoint{nav}, ncx.NavMap...)
+	}
+
+	if cover != nil {
+		ncx.NavMap = append([]*NavPoint{cover}, ncx.NavMap...)
 	}
 
 	// merge spine into NcxMap for avoiding missing some pages
@@ -191,26 +179,6 @@ func NewNcx(ncxPath string, outDir string, gitbook string, opf *OPF) (*NCX, erro
 
 	ncx.UpdateNavMap()
 
-	// remove duplicity node, avoid loop
-	for _, g := range opf.Guides {
-		for p := ncx.NavMap[len(ncx.NavMap)-1];p != nil; p=p.Prev{
-			sharpIdx := strings.Index(g.Href, "#")
-			var src string
-			if sharpIdx == -1 {
-				src = path.Base(g.Href)
-			} else {
-				src = path.Base(g.Href[0:sharpIdx])
-			}
-			if p.Src == src && p.from != "guide" {
-				if p.Prev != nil {
-					p.Prev.Next = p.Next
-				}
-				if p.Next != nil {
-					p.Next.Prev = p.Prev
-				}
-			}
-		}
-	}
 	return ncx, nil
 }
 
@@ -283,7 +251,7 @@ func trimSharp(s string) string {
 
 func findSubNav(sub []*NavPoint, src string) bool {
 	for _, nav := range sub {
-		if nav.Content.Src == src {
+		if trimSharp(nav.Content.Src) == trimSharp(src) {
 			return true
 		}
 		if len(nav.SubNavPoints) > 0 {
@@ -325,7 +293,7 @@ func (ncx *NCX) MergeSpine(opf *OPF) {
 				},
 			}
 			if idx > 0 {
-				mf2 := opf.findManifestItem(opf.Spine[idx - 1].Idref)
+				mf2 := opf.findManifestItem(opf.Spine[idx-1].Idref)
 				idx2 := findNav(mf2.Href)
 				if idx2 != -1 {
 					tmpMap[trimSharp(nav.Content.Src)] = nav
