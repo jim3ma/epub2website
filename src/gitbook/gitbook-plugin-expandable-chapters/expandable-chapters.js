@@ -5,6 +5,17 @@ require(['gitbook', 'jQuery'], function(gitbook, $) {
       TRIGGER_TEMPLATE = '<i class="exc-trigger fa"></i>',
       LS_NAMESPACE = 'expChapters';
   var init = function () {
+    $(".chapter a").each(function() {
+        var txt = $.trim($(this).text());
+        if(txt === '') {
+            $(this).remove();
+        }
+    });
+    w = $(window).width();
+    if (w < 600 ) {
+        $('.book .book-summary .chapter > .articles').css('max-height', '99999px');
+        return
+    }
     // adding the trigger element to each ARTICLES parent and binding the event
     $(ARTICLES)
       .parent(CHAPTER)
@@ -23,8 +34,6 @@ require(['gitbook', 'jQuery'], function(gitbook, $) {
     var activeChapter = $(CHAPTER + '.active');
     expand(activeChapter);
     expand(activeChapter.parents(CHAPTER));
-
-
   } 
   var toggle = function ($chapter) {
     if ($chapter.hasClass('expanded')) {
