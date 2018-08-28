@@ -17,6 +17,7 @@ import (
 	"github.com/rakyll/statik/fs"
 	_ "github.com/jim3ma/epub2website/statik"
 	"encoding/json"
+	"net/url"
 )
 
 const (
@@ -229,9 +230,13 @@ func (ncx *NCX) GenerateFromSpine(opf *OPF) {
 	}
 }
 
+// build a clean map with trim # after html
 func buildMap(npMap map[string]*NavPoint, nps []*NavPoint) {
 	for _, nav := range nps {
-		key := trimSharp(nav.Content.Src)
+		key, err := url.QueryUnescape(trimSharp(nav.Content.Src))
+		if err != nil {
+			key = trimSharp(nav.Content.Src)
+		}
 		//fmt.Println(key)
 		npMap[key] = nav
 		if len(nav.SubNavPoints) > 0 {
@@ -281,7 +286,11 @@ func (ncx *NCX) MergeSpine(opf *OPF) {
 		mf := opf.findManifestItem(item.Idref)
 		htmlPath := path.Join(ncx.WorkDir, mf.Href)
 		// check src in NcxMap
-		old, ok := tmpMap[trimSharp(mf.Href)]
+		trimPath, err := url.QueryUnescape(trimSharp(mf.Href))
+		if err != nil {
+			trimPath = trimSharp(mf.Href)
+		}
+		old, ok := tmpMap[trimPath]
 		// not in tmpMap
 		if old == nil && !ok {
 			//fmt.Printf("jim debug: page %s not found\n", mf.Href)
@@ -588,6 +597,23 @@ func (np *NavPoint) save(data []byte) error {
 
 func (np *NavPoint) loadHtml() error {
 	htmlPath := path.Join(np.NCX.WorkDir, np.HtmlPath)
+	//fmt.Println(htmlPath)
+	_, err := os.Stat(htmlPath)
+	// url escape
+	if os.IsNotExist(err) {
+		htmlPath, err = url.QueryUnescape(htmlPath)
+		if err != nil {
+			return err
+		}
+		np.HtmlPath, err = url.QueryUnescape(np.HtmlPath)
+		if err != nil {
+			return err
+		}
+		np.Src, err = url.QueryUnescape(np.Src)
+		if err != nil {
+			return err
+		}
+	}
 	htmlFile, err := os.OpenFile(htmlPath, os.O_RDONLY, 0644)
 	if err != nil {
 		return err
@@ -601,7 +627,9 @@ func (np *NavPoint) loadHtml() error {
 			panic(err)
 		}
 		x := xhtml{}
-		err = xml.Unmarshal(data, &x)
+		d := xml.NewDecoder(bytes.NewReader([]byte(data)))
+		d.Strict = false
+		err = d.Decode(&x)
 		if err != nil {
 			panic(err)
 		}
