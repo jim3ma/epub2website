@@ -231,7 +231,7 @@ func (ncx *NCX) GenerateFromSpine(opf *OPF) {
 }
 
 // build a clean map with trim # after html
-func buildMap(npMap map[string]*NavPoint, nps []*NavPoint) {
+func buildCacheMap(npMap map[string]*NavPoint, nps []*NavPoint) {
 	for _, nav := range nps {
 		key, err := url.QueryUnescape(trimSharp(nav.Content.Src))
 		if err != nil {
@@ -240,7 +240,7 @@ func buildMap(npMap map[string]*NavPoint, nps []*NavPoint) {
 		//fmt.Println(key)
 		npMap[key] = nav
 		if len(nav.SubNavPoints) > 0 {
-			buildMap(npMap, nav.SubNavPoints)
+			buildCacheMap(npMap, nav.SubNavPoints)
 		}
 	}
 }
@@ -267,20 +267,31 @@ func findSubNav(sub []*NavPoint, src string) bool {
 }
 
 func (ncx *NCX) MergeSpine(opf *OPF) {
-	tmpMap := make(map[string]*NavPoint)
-	buildMap(tmpMap, ncx.NavMap)
-	findNav := func(src string) int {
-		for idx, nav := range ncx.NavMap {
-			if nav.Content.Src == src {
-				return idx
+	// cacheMap is used for check whether the page is processed
+	cacheMap := make(map[string]*NavPoint)
+	// rawMap is used for quick check whether the spine page is in ncx map
+	rawMap := make(map[string]*NavPoint)
+
+	buildCacheMap(cacheMap, ncx.NavMap)
+	buildCacheMap(rawMap, ncx.NavMap)
+	findPrevNav := func(idx int) *NavPoint {
+		for i := idx -1 ; i > 0; i ++ {
+			mf := opf.findManifestItem(opf.Spine[i].Idref)
+			trimPath, err := url.QueryUnescape(trimSharp(mf.Href))
+			if err != nil {
+				trimPath = mf.Href
 			}
-			if len(nav.SubNavPoints) > 0 {
-				if findSubNav(nav.SubNavPoints, src) {
-					return idx
+			if nav, ok := rawMap[trimPath]; ok {
+				/*
+				if nav.SubNavPoints != nil {
+					// find last sub nav
+					return FindLastSubNav(nav)
 				}
+				*/
+				return nav
 			}
 		}
-		return -1
+		return nil
 	}
 	for idx, item := range opf.Spine {
 		mf := opf.findManifestItem(item.Idref)
@@ -290,8 +301,8 @@ func (ncx *NCX) MergeSpine(opf *OPF) {
 		if err != nil {
 			trimPath = trimSharp(mf.Href)
 		}
-		old, ok := tmpMap[trimPath]
-		// not in tmpMap
+		old, ok := cacheMap[trimPath]
+		// not in cacheMap
 		if old == nil && !ok {
 			//fmt.Printf("jim debug: page %s not found\n", mf.Href)
 			nav := &NavPoint{
@@ -301,18 +312,19 @@ func (ncx *NCX) MergeSpine(opf *OPF) {
 					Src: mf.Href,
 				},
 			}
-			if idx > 0 {
-				mf2 := opf.findManifestItem(opf.Spine[idx-1].Idref)
-				idx2 := findNav(mf2.Href)
-				if idx2 != -1 {
-					tmpMap[trimSharp(nav.Content.Src)] = nav
-					ncx.NavMap = append(ncx.NavMap[:idx2+1], append([]*NavPoint{nav}, ncx.NavMap[idx2+1:]...)...)
+			if idx == 0 {
+				cacheMap[trimSharp(nav.Content.Src)] = nav
+				ncx.NavMap = append([]*NavPoint{nav}, ncx.NavMap...)
+			} else {
+				// find the first pre page which in rawMap and in cacheMap
+				pre := findPrevNav(idx)
+				if pre != nil {
+					cacheMap[trimSharp(nav.Content.Src)] = nav
+					pre.SubNavPoints = append([]*NavPoint{nav}, pre.SubNavPoints...)
 				} else {
+					panic("may be a bug, please report the trace to majinjing3@gmail.com")
 					//fmt.Printf("jim debug: prev page %s not found\n", mf2.Href)
 				}
-			} else {
-				tmpMap[trimSharp(nav.Content.Src)] = nav
-				ncx.NavMap = append([]*NavPoint{nav}, ncx.NavMap...)
 			}
 		}
 	}
@@ -402,7 +414,7 @@ func (opf *OPF) findManifestItem(id string) *ManifestItem {
 }
 
 func (ncx *NCX) Render() (first *NavPoint, err error) {
-	navPoint := ncx.NavMap[len(ncx.NavMap)-1]
+	navPoint := FindLastSubNav(ncx.NavMap[len(ncx.NavMap)-1])
 	first = ncx.NavMap[0]
 	navi, err := ncx.RenderNavigation(navPoint)
 	// 逆序打印，这样每一页的标题会是第一个指向该页面的标题
@@ -737,6 +749,14 @@ func (np *NavPoint) FindPrevHtml() *NavPoint {
 		p = p.Prev
 	}
 	return nil
+}
+
+func FindLastSubNav(np *NavPoint) *NavPoint {
+	p := np.SubNavPoints[len(np.SubNavPoints) - 1]
+	if p.SubNavPoints != nil {
+		return FindLastSubNav(p)
+	}
+	return p
 }
 
 func (np *NavPoint) RelativePath(npx *NavPoint) string {
