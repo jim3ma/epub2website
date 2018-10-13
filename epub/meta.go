@@ -129,7 +129,9 @@ func NewNcx(ncxPath string, outDir string, gitbook string, opf *OPF) (*NCX, erro
 		tocFile, _ := os.OpenFile(ncxPath, os.O_RDONLY, 0644)
 		defer tocFile.Close()
 		tocData, _ := ioutil.ReadAll(tocFile)
-		err := xml.Unmarshal(tocData, ncx)
+		d := xml.NewDecoder(bytes.NewReader(tocData))
+		d.Strict = false
+		err = d.Decode(&ncx)
 		if err != nil {
 			return nil, err
 		}
@@ -219,6 +221,9 @@ func buildNavPointFromNavItem(item *ItemInner, relPath string) (np *NavPoint) {
 func (ncx *NCX) GenerateFromSpine(opf *OPF) {
 	for _, item := range opf.Spine {
 		mf := opf.findManifestItem(item.Idref)
+		if mf == nil {
+			continue
+		}
 		htmlPath := path.Join(ncx.WorkDir, mf.Href)
 		np := &NavPoint{
 			Title: findTitle(htmlPath),
@@ -275,8 +280,11 @@ func (ncx *NCX) MergeSpine(opf *OPF) {
 	buildCacheMap(cacheMap, ncx.NavMap)
 	buildCacheMap(rawMap, ncx.NavMap)
 	findPrevNav := func(idx int) *NavPoint {
-		for i := idx -1 ; i > 0; i ++ {
+		for i := idx -1 ; i >= 0; i -- {
 			mf := opf.findManifestItem(opf.Spine[i].Idref)
+			if mf == nil {
+				continue
+			}
 			trimPath, err := url.QueryUnescape(trimSharp(mf.Href))
 			if err != nil {
 				trimPath = mf.Href
@@ -295,6 +303,9 @@ func (ncx *NCX) MergeSpine(opf *OPF) {
 	}
 	for idx, item := range opf.Spine {
 		mf := opf.findManifestItem(item.Idref)
+		if mf == nil {
+			continue
+		}
 		htmlPath := path.Join(ncx.WorkDir, mf.Href)
 		// check src in NcxMap
 		trimPath, err := url.QueryUnescape(trimSharp(mf.Href))
@@ -320,7 +331,7 @@ func (ncx *NCX) MergeSpine(opf *OPF) {
 				pre := findPrevNav(idx)
 				if pre != nil {
 					cacheMap[trimSharp(nav.Content.Src)] = nav
-					pre.SubNavPoints = append([]*NavPoint{nav}, pre.SubNavPoints...)
+					pre.SubNavPoints = append(pre.SubNavPoints, nav)
 				} else {
 					panic("may be a bug, please report the trace to majinjing3@gmail.com")
 					//fmt.Printf("jim debug: prev page %s not found\n", mf2.Href)
@@ -344,7 +355,9 @@ func findHTitle(htmlPath string) (title string) {
 			panic(err)
 		}
 		x := xhtml{}
-		err = xml.Unmarshal(data, &x)
+		d := xml.NewDecoder(bytes.NewReader(data))
+		d.Strict = false
+		err = d.Decode(&x)
 		if err != nil {
 			panic(err)
 		}
@@ -384,7 +397,9 @@ func findTitle(htmlPath string) (title string) {
 			panic(err)
 		}
 		x := xhtml{}
-		err = xml.Unmarshal(data, &x)
+		d := xml.NewDecoder(bytes.NewReader(data))
+		d.Strict = false
+		err = d.Decode(&x)
 		if err != nil {
 			panic(err)
 		}
@@ -707,7 +722,9 @@ func (np *NavPoint) loadHtml() error {
 
 	// TODO remove outer html tag
 	x := xhtml{}
-	err = xml.Unmarshal([]byte(np.Body), &x)
+	d := xml.NewDecoder(bytes.NewReader([]byte(np.Body)))
+	d.Strict = false
+	err = d.Decode(&x)
 	if err != nil {
 		panic(err)
 	}
@@ -752,6 +769,9 @@ func (np *NavPoint) FindPrevHtml() *NavPoint {
 }
 
 func FindLastSubNav(np *NavPoint) *NavPoint {
+	if np.SubNavPoints == nil{
+		return np
+	}
 	p := np.SubNavPoints[len(np.SubNavPoints) - 1]
 	if p.SubNavPoints != nil {
 		return FindLastSubNav(p)
