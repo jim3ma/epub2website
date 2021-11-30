@@ -1,15 +1,15 @@
 package epub
 
 import (
-	"os"
-	"path"
 	"encoding/xml"
 	"io/ioutil"
+	"os"
+	"path"
 
 	"github.com/otiai10/copy"
 )
 
-func Convert(outputDir, unzipDir, gitbookUrl string) (string, error ){
+func Convert(outputDir, unzipDir, gitbookUrl string) (string, error) {
 	metaFile, err := os.OpenFile(path.Join(unzipDir, "META-INF", "container.xml"), os.O_RDONLY, 0644)
 	if err != nil {
 		return "", err

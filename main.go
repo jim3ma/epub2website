@@ -1,13 +1,14 @@
 package main
 
 import (
-	"os"
-	"fmt"
 	"flag"
+	"fmt"
 	"io/ioutil"
+	"os"
+
+	"github.com/mholt/archiver/v3"
 
 	"github.com/jim3ma/epub2website/epub"
-	"github.com/mholt/archiver"
 )
 
 var (
@@ -40,11 +41,11 @@ func main() {
 		defer os.Exit(1)
 		return
 	}
-
-	err = archiver.Zip.Open(epubFile, workdir)
+	zip := &archiver.Zip{}
+	err = zip.Unarchive(epubFile, workdir)
 	if err != nil {
-		defer os.Exit(1)
-		return
+		fmt.Printf("unarchive error: %s\n", err)
+		os.Exit(1)
 	}
 
 	firstPage, err := epub.Convert(output, workdir, gitbookUrl)

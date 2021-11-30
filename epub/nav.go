@@ -2,8 +2,8 @@ package epub
 
 import (
 	"encoding/xml"
-	"os"
 	"io/ioutil"
+	"os"
 )
 
 type NavDoc struct {
@@ -18,7 +18,7 @@ type Body struct {
 
 type Nav struct {
 	XMLName xml.Name `xml:"nav"`
-	Item    *Item     `xml:"ol"`
+	Item    *Item    `xml:"ol"`
 	Type    string   `xml:"type,attr"`
 }
 

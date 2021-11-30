@@ -1,23 +1,24 @@
 package epub
 
 import (
-	"path"
-	"os"
-	"strings"
-	"encoding/xml"
 	"bytes"
+	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/url"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
 	"text/template"
 	"time"
-	"path/filepath"
-	"net/http"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/rakyll/statik/fs"
+
 	_ "github.com/jim3ma/epub2website/statik"
-	"encoding/json"
-	"net/url"
 )
 
 const (
@@ -280,7 +281,7 @@ func (ncx *NCX) MergeSpine(opf *OPF) {
 	buildCacheMap(cacheMap, ncx.NavMap)
 	buildCacheMap(rawMap, ncx.NavMap)
 	findPrevNav := func(idx int) *NavPoint {
-		for i := idx -1 ; i >= 0; i -- {
+		for i := idx - 1; i >= 0; i-- {
 			mf := opf.findManifestItem(opf.Spine[i].Idref)
 			if mf == nil {
 				continue
@@ -291,10 +292,10 @@ func (ncx *NCX) MergeSpine(opf *OPF) {
 			}
 			if nav, ok := rawMap[trimPath]; ok {
 				/*
-				if nav.SubNavPoints != nil {
-					// find last sub nav
-					return FindLastSubNav(nav)
-				}
+					if nav.SubNavPoints != nil {
+						// find last sub nav
+						return FindLastSubNav(nav)
+					}
 				*/
 				return nav
 			}
@@ -534,9 +535,9 @@ func (ncx *NCX) updateNavPoint(prev *NavPoint, nav *NavPoint, depth int, index i
 
 	nav.NCX = ncx
 	/*
-	nav.WorkDir = ncx.WorkDir
-	nav.GitbookUrl = ncx.GitbookUrl
-	nav.OutDir = ncx.OutDir
+		nav.WorkDir = ncx.WorkDir
+		nav.GitbookUrl = ncx.GitbookUrl
+		nav.OutDir = ncx.OutDir
 	*/
 
 	if prev != nil {
@@ -623,6 +624,10 @@ func (np *NavPoint) save(data []byte) error {
 }
 
 func (np *NavPoint) loadHtml() error {
+	if np.HtmlPath == "" {
+		fmt.Fprintf(os.Stderr, "warnning: empty html path, title: %s\n", np.Title)
+		return nil
+	}
 	htmlPath := path.Join(np.NCX.WorkDir, np.HtmlPath)
 	//fmt.Println(htmlPath)
 	_, err := os.Stat(htmlPath)
@@ -730,18 +735,18 @@ func (np *NavPoint) loadHtml() error {
 	}
 	np.Body = x.Body.Inner
 	/*
-	np.HeadLinks, err = doc.Find("head").First().Html()
-	if err != nil {
-		return err
-	}
-	// TODO just find link in head tag
-	heads := strings.Split(np.HeadLinks, "\n")
-	np.HeadLinks = ""
-	for _, v := range heads {
-		if strings.Contains(v, "link") {
-			np.HeadLinks += v
+		np.HeadLinks, err = doc.Find("head").First().Html()
+		if err != nil {
+			return err
 		}
-	}
+		// TODO just find link in head tag
+		heads := strings.Split(np.HeadLinks, "\n")
+		np.HeadLinks = ""
+		for _, v := range heads {
+			if strings.Contains(v, "link") {
+				np.HeadLinks += v
+			}
+		}
 	*/
 	return nil
 }
@@ -769,10 +774,10 @@ func (np *NavPoint) FindPrevHtml() *NavPoint {
 }
 
 func FindLastSubNav(np *NavPoint) *NavPoint {
-	if np.SubNavPoints == nil{
+	if np.SubNavPoints == nil {
 		return np
 	}
-	p := np.SubNavPoints[len(np.SubNavPoints) - 1]
+	p := np.SubNavPoints[len(np.SubNavPoints)-1]
 	if p.SubNavPoints != nil {
 		return FindLastSubNav(p)
 	}
