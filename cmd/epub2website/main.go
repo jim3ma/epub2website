@@ -21,11 +21,10 @@ var (
 func init() {
 	flag.StringVar(&workdir, "w", "", "work directory")
 	flag.StringVar(&output, "o", "output", "output directory, must be a not exist directory")
-	flag.StringVar(&gitbookUrl, "g", "https://cdn.jim.plus/", "gitbook library endpoint, like https://cdn.jim.plus/")
+	flag.StringVar(&gitbookUrl, "g", "", "gitbook library endpoint, like https://cdn.jim.plus/")
 	flag.StringVar(&epubFile, "e", "", "epub book path")
 }
 
-//go:generate statik -src=./template
 func main() {
 	flag.Parse()
 	var err error

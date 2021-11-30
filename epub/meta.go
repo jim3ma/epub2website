@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -16,9 +15,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/rakyll/statik/fs"
-
-	_ "github.com/jim3ma/epub2website/statik"
+	"github.com/jim3ma/epub2website"
 )
 
 const (
@@ -29,8 +26,6 @@ const (
 	MediaTypeHTML      = "application/xhtml+xml"
 	MediaTypeNCX       = "application/x-dtbncx+xml"
 )
-
-var templatefs http.FileSystem
 
 type MetaInfo struct {
 	RootFile RootFile `xml:"rootfiles>rootfile"`
@@ -485,8 +480,7 @@ func (ncx *NCX) BuildIndex() (err error) {
 
 func (ncx *NCX) RenderNavigation(np *NavPoint) (string, error) {
 	var buf bytes.Buffer
-	//naviFile, err := os.OpenFile("./template/navigation.html", os.O_RDONLY, 0644)
-	naviFile, err := templatefs.Open("/navigation.html")
+	naviFile, err := epub2website.Embed.Open("template/navigation.html")
 	if err != nil {
 		return "", err
 	}
@@ -563,7 +557,7 @@ func (np *NavPoint) RenderPage(navi string) ([]byte, error) {
 	var buf bytes.Buffer
 
 	// pageFile, err := os.OpenFile("./template/page.html", os.O_RDONLY, 0644)
-	pageFile, err := templatefs.Open("/page.html")
+	pageFile, err := epub2website.Embed.Open("template/page.html")
 	if err != nil {
 		return nil, err
 	}
@@ -817,12 +811,4 @@ func (np *NavPoint) TrimHash(orig string) string {
 func now() string {
 	t := time.Now()
 	return t.Format("2006-01-02T15:04:05Z07:00")
-}
-
-func init() {
-	var err error
-	templatefs, err = fs.New()
-	if err != nil {
-		panic(err)
-	}
 }
