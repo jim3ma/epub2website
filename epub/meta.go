@@ -189,6 +189,13 @@ func (ncx *NCX) GenerateFromNavDoc(navDoc *NavDoc, relPath string) {
 		}
 	}
 	if nav == nil {
+		for _, v := range navDoc.Body.Section.Nav {
+			if v.Type == "toc" {
+				nav = v
+			}
+		}
+	}
+	if nav == nil {
 		panic("error nav doc")
 	}
 	for _, item := range nav.Item.ItemInner {

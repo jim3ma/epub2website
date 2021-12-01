@@ -14,6 +14,13 @@ type NavDoc struct {
 type Body struct {
 	XMLName xml.Name `xml:"body"`
 	Nav     []*Nav   `xml:"nav"`
+	// some epub has an extra "section"
+	Section Section  `xml:"section"`
+}
+
+type Section struct {
+	XMLName xml.Name `xml:"section"`
+	Nav     []*Nav   `xml:"nav"`
 }
 
 type Nav struct {
