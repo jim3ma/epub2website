@@ -1,4 +1,4 @@
-# Epub2Website - An epub to website converter
+# Epub2Website - An EPUB format to website converter
 
 Now, support convert epub to website like [Honkit](https://github.com/honkit/honkit) style.
 
@@ -40,7 +40,7 @@ You can also copy all assets in [src](./src) to `calibre-web/cps/static`. Then s
 
 > Confirm gitbook directory locates with `calibre-web/cps/static/gitbook`.
 
-# Supported plugin
+# Supported plugins
 
 All plugin should be updated in [./template/navigation.html](./template/navigation.html) and [./template/page.html](./template/page.html)
 
@@ -51,4 +51,16 @@ All plugin should be updated in [./template/navigation.html](./template/navigati
 * gitbook-plugin-search-plus
 * gitbook-plugin-fontsettings
 * gitbook-plugin-expandable-chapters
-* gitbook-plugin-splitte
+* gitbook-plugin-splitter
+
+# Supported EPUB version
+
+EPUB 2, EPUB 3
+
+# Refer
+
+1. [Comparison of e-book formats: https://www.w3.org/AudioVideo/ebook/](https://www.w3.org/AudioVideo/ebook/)
+2. [EPUB 2.0.1: http://idpf.org/epub/20](http://idpf.org/epub/201)
+3. [EPUB 3.2: https://www.w3.org/publishing/epub32/](https://www.w3.org/publishing/epub32/)
+4. [EPUB 3 Working Group: https://www.w3.org/publishing/groups/epub-wg/](https://www.w3.org/publishing/groups/epub-wg/)
+5. [EPUB 3.2 Specification: https://www.w3.org/publishing/epub/epub-spec.html](https://www.w3.org/publishing/epub/epub-spec.html)
