@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
-    <title>{{ .Title}}</title>
+    <title>{{ .Title }}</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
     <meta name="description" content="">
     <meta name="generator" content="GitBook 3.2.3">
@@ -44,7 +44,7 @@
         <div id="book-search-input" role="search">
             <input type="text" placeholder="Type to search"/>
         </div>
-    {{ .Navigation}}
+    {{ .Navigation }}
     </div>
     <div class="book-body">
         <div class="body-inner">
@@ -60,7 +60,7 @@
                     <div id="book-search-results">
                         <div class="search-noresults">
                             <section class="normal markdown-section">
-                            {{ .Body}}
+                            {{ .Body }}
                             </section>
                             <!--
                             <footer class="page-footer">
@@ -92,14 +92,14 @@
             </div>
         </div>
     {{- if $p }}
-        <a href="{{ $p | base | trim | ext}}" class="navigation navigation-prev{{if not $n}} navigation-unique{{end}}"
-           aria-label="Previous page: {{ $p.Title}}">
+        <a href="{{ $p | base | trim | ext }}" class="navigation navigation-prev{{ if not $n }} navigation-unique{{ end }}"
+           aria-label="Previous page: {{ $p.Title }}">
             <i class="fa fa-angle-left"></i>
         </a>
     {{- end -}}
     {{- if $n }}
-        <a href="{{ $n | base | trim | ext}}" class="navigation navigation-next{{if not $p}} navigation-unique{{end}}"
-           aria-label="Next page: {{ $n.Title}}">
+        <a href="{{ $n | base | trim | ext }}" class="navigation navigation-next{{ if not $p }} navigation-unique{{ end }}"
+           aria-label="Next page: {{ $n.Title }}">
             <i class="fa fa-angle-right"></i>
         </a>
     {{- end }}
@@ -116,7 +116,7 @@
                     "depth": 1,
                 {{- if .Next }}
                     "next": {
-                        "title": "{{ .Next.Title}}",
+                        "title": "{{ .Next.Title }}",
                         "level": "2.2",
                         "depth": 1,
                         "path": "next.md",
@@ -126,14 +126,14 @@
                 {{- end -}}
                 {{- if .Prev }}
                     "previous": {
-                        "title": "{{ .Prev.Title}}",
+                        "title": "{{ .Prev.Title }}",
                         "level": "1.1",
                         "depth": 1,
                         "path": "prev.md",
                         "ref": "prev.md",
                         "articles": []
                     },
-                {{- end}}
+                {{- end }}
                     "dir": "ltr"
                 },
                 "config": {
