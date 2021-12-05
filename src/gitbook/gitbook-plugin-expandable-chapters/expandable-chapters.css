@@ -3,6 +3,12 @@
 	max-height: 0px;
 }
 
+.book .book-summary .chapter {
+	font-size: 14px;
+	text-align: left;
+	margin: 0 0 0 0;
+}
+
 .book .book-summary .chapter.expanded > .articles {
 	max-height: 9999px;
 }
