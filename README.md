@@ -1,4 +1,4 @@
-# Epub2Website - An EPUB format to website converter
+# Epub2Website - An EPUB format to website converter with Honkit&Gitbook style
 
 Now, support convert epub to website like [Honkit](https://github.com/honkit/honkit) style.
 
@@ -56,6 +56,10 @@ All plugin should be updated in [./template/navigation.html](./template/navigati
 # Supported EPUB version
 
 EPUB 2, EPUB 3
+
+## Licensing
+
+Epub2Website is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for the full license text.
 
 # Refer
 
