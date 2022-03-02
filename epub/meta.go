@@ -140,7 +140,7 @@ func NewNcx(ncxPath string, outDir string, gitbook string, opf *OPF) (*NCX, erro
 	}
 
 	ncx.OutDir = outDir
-	ncx.GitbookUrl = gitbook
+	ncx.GitbookUrl = strings.TrimRight(gitbook, "/")
 
 	var cover *NavPoint
 	for _, g := range opf.Guides {

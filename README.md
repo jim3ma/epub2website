@@ -6,6 +6,8 @@ Now, support convert epub to website like [Honkit](https://github.com/honkit/hon
 
 ## Build binary
 
+> Need golang 1.16+
+
 Run:
 
 ```shell
