@@ -42,6 +42,7 @@ func main() {
 	}
 	zip := &archiver.Zip{
 		OverwriteExisting: true,
+		MkdirAll:          true,
 	}
 	err = zip.Unarchive(epubFile, workdir)
 	if err != nil {
