@@ -45,7 +45,7 @@ func main() {
 	}
 	err = zip.Unarchive(epubFile, workdir)
 	if err != nil {
-		fmt.Printf("unarchive error: %s\n", err)
+		fmt.Fprintf(os.Stderr, "unarchive error: %s\n", err)
 		os.Exit(1)
 	}
 
