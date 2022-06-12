@@ -40,7 +40,9 @@ func main() {
 		defer os.Exit(1)
 		return
 	}
-	zip := &archiver.Zip{}
+	zip := &archiver.Zip{
+		OverwriteExisting: true,
+	}
 	err = zip.Unarchive(epubFile, workdir)
 	if err != nil {
 		fmt.Printf("unarchive error: %s\n", err)
